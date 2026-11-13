@@ -58,8 +58,12 @@ class Bluetooth(Backend):
             print(f'Connecting to {self._address}')
             self._client = BleakClient(self._address)
 
-        if await self._client.connect():
-            await self._client.start_notify(self.RX_CHARACTERISTIC, self.rx_handler)
+        # bleak >= 1.0 returns None from connect() and raises on failure,
+        # so don't gate the RX subscription on its return value.
+        await self._client.connect()
+        if not self._client.is_connected:
+            raise ConnectionError(f'Could not connect to {self._address}')
+        await self._client.start_notify(self.RX_CHARACTERISTIC, self.rx_handler)
 
     async def is_connected(self) -> bool:
         return self._client.is_connected if self._client else False
